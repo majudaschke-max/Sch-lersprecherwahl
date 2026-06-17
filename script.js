@@ -10,6 +10,7 @@ const db = isConfigured && window.supabase
   : null;
 
 const state = {
+const state = {
   session: null,
   isAdmin: false,
   openElections: [],
