@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schülersprecherwahl Online</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div>
+        <p class="eyebrow">Supabase Online-Wahl</p>
+        <h1>Schülersprecherwahl</h1>
+      </div>
+      <p class="header-note">Zentrale Stimmenzählung, einmalige Wahlcodes, keine Namen der Wählenden.</p>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section id="configWarning" class="notice warning hidden" aria-live="polite">
+      Supabase ist noch nicht konfiguriert. Trage in <strong>script.js</strong> deine Projekt-URL und den öffentlichen anon key ein.
+    </section>
+
+    <nav class="mode-tabs" aria-label="App-Bereiche">
+      <button class="tab-button active" type="button" data-tab="vote">Abstimmen</button>
+      <button class="tab-button" type="button" data-tab="admin">Admin</button>
+      <button class="tab-button" type="button" data-tab="publicResults">Öffentliches Ergebnis</button>
+    </nav>
+
+    <section id="voteView" class="view active" aria-labelledby="voteTitle">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Wähleransicht</p>
+            <h2 id="voteTitle">Stimme abgeben</h2>
+          </div>
+        </div>
+
+        <p class="privacy-copy">
+          Diese Wahl nutzt einmalige Wahlcodes. Es werden keine Namen der Wählenden erfasst. Der Wahlcode wird nur verwendet, um Mehrfachabstimmungen zu verhindern.
+        </p>
+
+        <form id="tokenForm" class="stack" novalidate>
+          <div class="field">
+            <label for="voterElectionSelect">Wahl auswählen</label>
+            <select id="voterElectionSelect" required></select>
+          </div>
+
+          <div class="field">
+            <label for="voterToken">Wahlcode</label>
+            <input id="voterToken" type="text" inputmode="text" autocomplete="one-time-code" placeholder="AB7K-29QF" required>
+          </div>
+
+          <div id="tokenMessage" class="message" aria-live="polite"></div>
+
+          <div class="button-row">
+            <button class="button button-primary" type="submit">Code prüfen</button>
+            <button class="button button-secondary" id="reloadOpenElectionsButton" type="button">Wahlen aktualisieren</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="ballotPanel" class="panel hidden" aria-labelledby="ballotTitle">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Stimmzettel</p>
+            <h2 id="ballotTitle">Kandidatinnen und Kandidaten wählen</h2>
+          </div>
+          <span id="ballotSeatBadge" class="status-pill"></span>
+        </div>
+
+        <p id="ballotInstruction" class="body-copy"></p>
+
+        <form id="ballotForm" novalidate>
+          <div id="ballotFields" class="vote-grid"></div>
+          <div id="ballotMessage" class="message" aria-live="polite"></div>
+          <div class="button-row">
+            <button class="button button-primary" type="submit">Stimme abgeben</button>
+            <button class="button button-secondary" id="clearBallotButton" type="button">Auswahl zurücksetzen</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="adminView" class="view" aria-labelledby="adminTitle">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Wahlleitung</p>
+            <h2 id="adminTitle">Admin-Bereich</h2>
+          </div>
+          <button class="button button-secondary hidden" id="logoutButton" type="button">Abmelden</button>
+        </div>
+
+        <p class="privacy-copy">
+          Die App ersetzt keine rechtliche Wahlprüfung. Sie unterstützt eine schulinterne Online-Wahl organisatorisch und technisch. Die Wahlleitung bleibt für Ausgabe der Wahlcodes, Aufsicht und Dokumentation verantwortlich.
+        </p>
+
+        <form id="loginForm" class="auth-grid" novalidate>
+          <div class="field">
+            <label for="adminEmail">Admin-E-Mail</label>
+            <input id="adminEmail" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="adminPassword">Passwort</label>
+            <input id="adminPassword" type="password" autocomplete="current-password" required>
+          </div>
+          <button class="button button-primary" type="submit">Einloggen</button>
+        </form>
+
+        <div id="loginMessage" class="message" aria-live="polite"></div>
+      </div>
+
+      <div id="adminWorkspace" class="hidden">
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Wahlen</p>
+              <h2>Wahl verwalten</h2>
+            </div>
+            <span id="adminStatus" class="status-pill">Nicht geladen</span>
+          </div>
+
+          <div class="admin-grid">
+            <div class="field">
+              <label for="adminElectionSelect">Vorhandene Wahl</label>
+              <select id="adminElectionSelect"></select>
+            </div>
+            <div class="button-row compact">
+              <button class="button button-secondary" id="newElectionButton" type="button">Neue Wahl</button>
+              <button class="button button-secondary" id="refreshAdminButton" type="button">Aktualisieren</button>
+            </div>
+          </div>
+
+          <form id="electionForm" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="electionTitleInput">Wahlname / Titel</label>
+                <input id="electionTitleInput" type="text" placeholder="Schülersprecherwahl 2026" required>
+              </div>
+              <div class="field">
+                <label for="seatsInput">Anzahl der zu wählenden Personen</label>
+                <input id="seatsInput" type="number" min="1" step="1" value="3" required>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="candidateTextarea">Kandidatenliste</label>
+              <textarea id="candidateTextarea" rows="9" placeholder="Ein Name pro Zeile"></textarea>
+              <p class="hint">Leere Zeilen werden ignoriert. Kandidaten und Sitzzahl sind nach Wahlstart gesperrt.</p>
+            </div>
+
+            <label class="check-option" for="publicResultsInput">
+              <input id="publicResultsInput" type="checkbox">
+              Ergebnis nach Wahlende öffentlich anzeigen
+            </label>
+
+            <div id="electionMessage" class="message" aria-live="polite"></div>
+
+            <div class="button-row">
+              <button class="button button-primary" id="saveElectionButton" type="submit">Wahl speichern</button>
+              <button class="button button-success" id="openElectionButton" type="button">Wahl starten</button>
+              <button class="button button-warning" id="closeElectionButton" type="button">Wahl schließen</button>
+              <button class="button button-secondary" id="archiveElectionButton" type="button">Archivieren</button>
+              <button class="button button-danger" id="deleteElectionButton" type="button">Vollständig zurücksetzen</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Wahlcodes</p>
+              <h2>Einmalcodes erzeugen</h2>
+            </div>
+          </div>
+
+          <p class="body-copy">
+            Klartext-Codes werden nur direkt nach dem Erzeugen angezeigt und exportiert. In Supabase wird nur der Hash gespeichert.
+          </p>
+
+          <div class="admin-grid">
+            <div class="field">
+              <label for="codeAmountInput">Anzahl Wahlcodes</label>
+              <input id="codeAmountInput" type="number" min="1" max="2000" step="1" value="600">
+            </div>
+            <div class="button-row compact">
+              <button class="button button-primary" id="generateCodesButton" type="button">Codes erzeugen</button>
+              <button class="button button-secondary" id="downloadCodesButton" type="button" disabled>Codes als CSV exportieren</button>
+            </div>
+          </div>
+
+          <textarea id="generatedCodesOutput" class="code-output" rows="8" readonly placeholder="Neue Codes erscheinen hier nur direkt nach dem Erzeugen."></textarea>
+          <div id="codeMessage" class="message" aria-live="polite"></div>
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Auswertung</p>
+              <h2>Ergebnis der ausgewählten Wahl</h2>
+            </div>
+          </div>
+
+          <div id="adminStats" class="result-stats"></div>
+          <div id="adminTieNotice" class="message" aria-live="polite"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Rang</th>
+                  <th scope="col">Kandidat/in</th>
+                  <th scope="col">Stimmen</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody id="adminResultBody"></tbody>
+            </table>
+          </div>
+
+          <div id="adminResultMessage" class="message" aria-live="polite"></div>
+
+          <div class="button-row">
+            <button class="button button-secondary" id="exportResultsButton" type="button">Ergebnis als CSV exportieren</button>
+            <button class="button button-secondary" id="copyResultsButton" type="button">Ergebnis kopieren</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="publicResultsView" class="view" aria-labelledby="publicResultsTitle">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Öffentlich</p>
+            <h2 id="publicResultsTitle">Freigegebene Ergebnisse</h2>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="publicElectionSelect">Abgeschlossene Wahl auswählen</label>
+          <select id="publicElectionSelect"></select>
+        </div>
+
+        <div id="publicResultStats" class="result-stats"></div>
+        <div id="publicTieNotice" class="message" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Rang</th>
+                <th scope="col">Kandidat/in</th>
+                <th scope="col">Stimmen</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="publicResultBody"></tbody>
+          </table>
+        </div>
+
+        <div id="publicResultMessage" class="message" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
