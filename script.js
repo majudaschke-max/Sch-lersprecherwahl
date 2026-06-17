@@ -1,10 +1,8 @@
-const SUPABASE_URL = "https://jjbxidmatwlgjahwofog.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_yMImgCLO1O_8XFpP2476TQ_3C5X9IM8";
 "use strict";
 
 // Public Supabase values are safe in a browser app. Never put the service_role key here.
-const SUPABASE_URL = "https://DEIN-PROJEKT.supabase.co";
-const SUPABASE_ANON_KEY = "DEIN_PUBLIC_ANON_KEY";
+const SUPABASE_URL = "https://jjbxidmatwlgjahwofog.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_yMImgCLO1O_8XFpP2476TQ_3C5X9IM8";
 
 const isConfigured = !SUPABASE_URL.includes("DEIN-PROJEKT") && !SUPABASE_ANON_KEY.includes("DEIN_PUBLIC");
 const db = isConfigured && window.supabase
