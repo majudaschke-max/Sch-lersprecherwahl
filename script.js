@@ -1,3 +1,5 @@
+const SUPABASE_URL = "https://jjbxidmatwlgjahwofog.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_yMImgCLO1O_8XFpP2476TQ_3C5X9IM8";
 "use strict";
 
 // Public Supabase values are safe in a browser app. Never put the service_role key here.
